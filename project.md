@@ -1,6 +1,6 @@
 项目背景->模型架构->数据处理->训练过程->优化调整->结果->总结
 
-# bdd100k-Yolo v5
+# 无人驾驶目标检测
 
 ### 项目背景
 
@@ -9,6 +9,8 @@
 ### 模型架构
 
 考虑到汽车在行驶中需要快速的识别道路上的物体，于是我选择了单阶段的端到端目标检测算法yolov5，yolov5在保证速度的前提下又有着十分不错的精度；
+
+[![Rg4KII.png](https://z3.ax1x.com/2021/07/03/Rg4KII.png)](https://imgtu.com/i/Rg4KII)
 
 采取**Mosaic数据增强**方法，通过随即缩放、随机剪裁和随机排布的方式进行拼接，增强了小目标的检测效果；另外采用自适应锚框计算，自适应的计算不同训练集中的最佳锚框值；
 
@@ -34,7 +36,7 @@ Neck和yolov4中一样，都采用FPN+PAN的结构，FPN层的后面还添加了
 
 **CIOU_Loss：**在DIOU的基础上，考虑边界框宽高比的尺度信息。
 
-Yolov5中采用加权nms的方式
+Yolov5中采用加权[nms](https://zhuanlan.zhihu.com/p/50126479)方式
 
 loss = GIOU_loss + cls_loss + obj_loss，使用**二进制交叉熵**和 **Logits** 损失函数计算类概率和目标得分的损失
 
@@ -46,19 +48,47 @@ Bdd100k的标签是由Scalabel生成的JSON格式，首先得将bdd100k的标签
 
 ### 训练
 
-训练了200个epoch，大约在180个epoch左右就达到了最优效果，mAP_0.5 = 41.3%
+训练了200个epoch，大约在180个epoch左右就达到了最优效果，[mAP_0.5](https://blog.csdn.net/luke_sanjayzzzhong/article/details/89851944) = 41.3%
 
 ### 优化
 
-可以调整骨干网络，换用更加轻量级的mobilenet；通过h['fl_gamma']参数开启**focal Loss**,默认配置没有采用focal loss
+可以调整骨干网络，换用更加轻量级的mobilenet；通过h['fl_gamma']参数开启**[focal Loss](https://www.cnblogs.com/king-lps/p/9497836.html)**,默认配置没有采用focal loss
 
 ### 总结
 
-# Detr-Vistr
+# 瓷砖表面瑕疵质检
 
+### 项目背景
 
+瓷砖表面的瑕疵检测是瓷砖行业生产和质量管理的重要环节，也是困扰行业多年的技术瓶颈。利用高效可靠的计算机视觉算法，尽可能快与准确的给出瓷砖疵点具体的位置和类别;
 
-# Unet++[efficient-b6]
+### 模型架构
+
+见首个项目
+
+[yolov5深度解析](https://zhuanlan.zhihu.com/p/183838757)
+
+### 数据
+
+切图：原图大小为:h=6000,w=8192；切图的大小为:640x640,剔除纯背景图片， overlap比例:0.2；步长为512；从原图左上角开始切图,切出来图像的左上角记为x,y；y依次为:0,512,1024,....,5120.但接下来却并非是5632,因为5632+640>6000,所以这里要对切图的overlap做一个调整,最后一步的y=6000-640；
+
+进行简单的数据增强：灰度正规化、增强对比度、水平垂直翻转，效果略有提升
+
+### 训练
+
+batch_size为16，优化器为SGD，LambdaLR自定义调整学习率，训练了200个epoch，发现在150个epoch左右达到最优效果，0.2[ACC](https://www.pianshen.com/article/6386546945/)+0.8mAP = 0.5357
+
+### 难点
+
+数据存在目标类别数量不均衡，尺度不均衡，小目标瑕疵占比较大，瑕疵的大小变化大；
+
+后面优化是通过h['fl_gamma']参数开启**focal Loss**，效果略有提升；
+
+### 展望
+
+可以尝试该换backbone例如Res2net；加入[DCN](https://blog.csdn.net/yeler082/article/details/78370795)模块，双阈值策略等等
+
+# 遥感影像地物要素分割
 
 ### 项目背景
 
@@ -70,7 +100,7 @@ Bdd100k的标签是由Scalabel生成的JSON格式，首先得将bdd100k的标签
 
 考虑到分割的精度要求，采用[Unet++](https://www.zhihu.com/column/p/295427213?utm_medium=social&utm_source=weibo)网络架构，使用[efficient-b6](https://zhuanlan.zhihu.com/p/137191387)作为backbone；
 
-loss是[focal loss](https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&tn=baidu&wd=focal-loss&oq=dice-loss&rsv_pq=9491f9510000baa9&rsv_t=2cdaGaYVlktSJmlyD1koJiymN%2F%2FbkuUSOx5%2Fho90VjHlwk2muzpc%2FRHvbpo&rqlang=cn&rsv_dl=tb&rsv_enter=1&rsv_sug3=6&rsv_sug1=3&rsv_sug7=100&rsv_sug2=0&rsv_btype=t&inputT=927&rsv_sug4=1932)+[dice-loss](https://zhuanlan.zhihu.com/p/269592183)+[softCrossEntropy](https://www.jianshu.com/p/47172eb86b39)联合loss，优化器用的是[AdamW](https://zhuanlan.zhihu.com/p/39543160)，[warm up](https://zhuanlan.zhihu.com/p/261312302) [Cosine](https://zhuanlan.zhihu.com/p/93624972) Scheduler动态调整学习率；[学习率调整策略](https://zhuanlan.zhihu.com/p/93624972)
+loss是[focal loss](https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&tn=baidu&wd=focal-loss&oq=dice-loss&rsv_pq=9491f9510000baa9&rsv_t=2cdaGaYVlktSJmlyD1koJiymN%2F%2FbkuUSOx5%2Fho90VjHlwk2muzpc%2FRHvbpo&rqlang=cn&rsv_dl=tb&rsv_enter=1&rsv_sug3=6&rsv_sug1=3&rsv_sug7=100&rsv_sug2=0&rsv_btype=t&inputT=927&rsv_sug4=1932)+[dice-loss](https://zhuanlan.zhihu.com/p/269592183)+[softCrossEntropy](https://www.jianshu.com/p/47172eb86b39)联合loss，优化器用的是[AdamW](https://zhuanlan.zhihu.com/p/113112032)，[warm up](https://zhuanlan.zhihu.com/p/261312302) [Cosine](https://zhuanlan.zhihu.com/p/93624972) Scheduler动态调整学习率；[学习率调整策略](https://zhuanlan.zhihu.com/p/93624972)
 
 ### 数据
 
@@ -85,32 +115,17 @@ batch_size为64，lr = 3e-4，训练了300个epoch，模型大约在250个epoch�
 
 [![R8Shvt.png](https://z3.ax1x.com/2021/06/26/R8Shvt.png)](https://imgtu.com/i/R8Shvt)
 
-mIoU最好得分为0.3829
+[mIoU](https://zhuanlan.zhihu.com/p/88805121)最好得分为0.3829
 
 ### 优化
 
 开始用loss的是softCrossEntropy，因为数据存在类别不平衡问题，改进loss加入focal-loss和dice-loss，mIoU提升了约1个点；过程中还尝试过换模型deeplabv3+，更大的backbone，换SGD优化器，学习率调整策略等等，效果都不如这个好；还有一些trick没有尝试，比如多模型融合，多尺度训练/测试等等
 
-# 瓷砖-Yolo v5
 
-### 项目背景
 
-瓷砖表面的瑕疵检测是瓷砖行业生产和质量管理的重要环节，也是困扰行业多年的技术瓶颈。利用高效可靠的计算机视觉算法，尽可能快与准确的给出瓷砖疵点具体的位置和类别;
+# 经典网络解析
 
-### 模型架构
+[AlexNet、VGG、NIN、GoogLeNet、ResNet etc.](https://zhuanlan.zhihu.com/p/47391705)
 
-见首个项目
+[FCN、SegNet、Unet、PSPNet、DeepLab系列](https://blog.csdn.net/qq_37002417/article/details/108274404)
 
-### 数据
-
-切图：原图大小为:h=6000,w=8192；切图的大小为:640x640,剔除纯背景图片， overlap比例:0.2；步长为512；从原图左上角开始切图,切出来图像的左上角记为x,y；y依次为:0,512,1024,....,5120.但接下来却并非是5632,因为5632+640>6000,所以这里要对切图的overlap做一个调整,最后一步的y=6000-640；
-
-进行简单的数据增强：灰度正规化、增强对比度、水平垂直翻转，效果略有提升
-
-### 训练
-
-batch_size为16，优化器为SGD，LambdaLR自定义调整学习率，训练了200个epoch，发现在150个epoch左右达到最优效果，0.2ACC+0.8mAP = 0.5357
-
-### 优化
-
-过程中将原图切为640 x 640的小块在进行训练，最后推理线上得分提高了约2个点；
